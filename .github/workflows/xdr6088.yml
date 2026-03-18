@@ -47,7 +47,7 @@ jobs:
 
       - name: 5. ✨ Generate the ULTIMATE .config file
         run: |
-          chmod +x ./diy.sh
+          chmod +x ./diy1.sh
           cd immortalwrt
           
           # 第一步：铺上你从虚拟机提取的完美“硬件底盘”，保证闭源驱动不死机
