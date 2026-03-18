@@ -1,22 +1,20 @@
 #
-# OpenClaw 为您打造的【Padavanonly·终极版】MTK平台编译工作流
-# 策略: 使用您指定的正确源码，编译最基础的系统和LuCI，建立成功基线
+# OpenClaw 为您打造的【终极版】MTK平台编译工作流
+# 策略: 在您最终的指引下，注入HNAT/WED硬件加速的灵魂！
 #
 
-name: Build ImmortalWrt for MT7986 (Padavanonly Edition)
+name: Build ImmortalWrt for MT7986 (Ultimate HNAT Edition)
 
 on:
   workflow_dispatch:
 
 env:
-  # --- 【核心修正点：使用您指定的正确源码！】 ---
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
-  # padavanonly 的仓库分支名通常是 master
   OPENWRT_BRANCH: "2410" 
 
   DEVICE_PROFILE: tplink_tl-xdr6088
-  CONFIG_NAME: xdr6088-minimal.config
-  FIRMWARE_NAME: immortalwrt-mt7986-xdr6088-minimal
+  CONFIG_NAME: xdr6088-hnat.config
+  FIRMWARE_NAME: immortalwrt-mt7986-xdr6088-hnat
 
 jobs:
   build:
@@ -43,7 +41,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 5. ✨ Generate a minimal .config file
+      - name: 5. ✨ Generate the ULTIMATE .config file with HNAT
         run: |
           cd immortalwrt
           rm -f .config
@@ -52,8 +50,15 @@ jobs:
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
+
+          # --- 【灵魂注入：启用硬件加速】---
+          # 启用硬件流量分载 (Hardware Flow Offloading)
+          CONFIG_HW_FLOW_OFFLOADING=y
+          # 启用MTK HNAT/WED硬件加速所需的关键内核模块
+          CONFIG_PACKAGE_kmod-mtk-hnat=y
+          CONFIG_PACKAGE_kmod-mtk-wed=y
           
-          # Base System & LuCI ONLY
+          # Base System & LuCI
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
           CONFIG_PACKAGE_luci-app-reboot=y
@@ -79,8 +84,11 @@ jobs:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
           path: immortalwrt/bin/targets/mediatek/filogic/*.bin
 
+
       - name: 9. Upload .config file artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
+
+
