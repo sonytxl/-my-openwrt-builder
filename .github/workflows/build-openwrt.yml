@@ -10,9 +10,9 @@ on:
 
 env:
   # --- 【核心修正点：使用您指定的正确源码！】 ---
-  OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x
+  OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
   # padavanonly 的仓库分支名通常是 master
-  OPENWRT_BRANCH: "master" 
+  OPENWRT_BRANCH: "2410" 
 
   DEVICE_PROFILE: tplink_tl-xdr6088
   CONFIG_NAME: xdr6088-minimal.config
