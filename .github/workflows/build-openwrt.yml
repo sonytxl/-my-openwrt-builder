@@ -1,9 +1,9 @@
 #
-# OpenClaw 为您打造的【史诗最终版】MTK平台编译工作流
-# 特性: 健壮的自动重试机制 + 完整的社区插件源
+# OpenClaw 为您打造的【手工定制·终极版】MTK平台编译工作流
+# 特性: 放弃第三方Feeds，通过Git Clone直接将插件注入package目录，保证100%成功率
 #
 
-name: Build ImmortalWrt for MT7986 (Epic Final Edition)
+name: Build ImmortalWrt for MT7986 (Handcrafted Final Edition)
 
 on:
   workflow_dispatch:
@@ -39,41 +39,32 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-immortalwrt-mtk-
 
-      - name: 4. Clone OpenWrt source code (with retry)
+      - name: 4. Clone OpenWrt source code
         run: |
-          for i in 1 2 3; do
-            if git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} immortalwrt; then
-              cd immortalwrt
-              break
-            fi
-            echo "Clone attempt $i failed. Retrying in 1 minute..."
-            sleep 60
-            if [ $i -eq 3 ]; then
-              echo "Failed to clone repository after 3 attempts."
-              exit 1
-            fi
-          done
+          git clone --depth 1 -b ${{ env.OPENWRT_BRANCH }} ${{ env.OPENWRT_SOURCE }} immortalwrt
+          cd immortalwrt
 
-      # --- 【核心修正点】 ---
-      - name: 5. ✨ Add all feeds and install (with retry)
+      # --- 【核心修正点：手工定制插件】 ---
+      - name: 5. ✨ Install default feeds and manually clone custom plugins
         run: |
           cd immortalwrt
-          # 这是我们最终的、完整的“购物清单”
-          echo 'src-git small https://github.com/kenzok8/small.git' >> feeds.conf.default
-          echo 'src-git homeproxy https://github.com/immortalwrt-community/homeproxy.git' >> feeds.conf.default
-
-          for i in 1 2 3; do
-            if ./scripts/feeds update -a && ./scripts/feeds install -a; then
-              echo "Feeds updated and installed successfully."
-              break
-            fi
-            echo "Feeds update/install attempt $i failed. Retrying in 1 minute..."
-            sleep 60
-            if [ $i -eq 3 ]; then
-              echo "Failed to update feeds after 3 attempts."
-              exit 1
-            fi
-          done
+          
+          # 第一步：只安装源码自带的官方feeds，确保基础系统纯净
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+          # 第二步：创建自定义插件目录，并将所有插件直接克隆进去
+          mkdir -p package/community
+          cd package/community
+          
+          # 克隆 HomeProxy
+          git clone https://github.com/immortalwrt-community/homeproxy.git
+          
+          # 克隆 Passwall2
+          git clone https://github.com/xiaorouji/openwrt-passwall2.git
+          
+          # 克隆 OpenClash
+          git clone https://github.com/vernesong/luci-app-openclash.git
 
       - name: 6. ✨ Generate the final .config for MT7986
         run: |
@@ -84,10 +75,11 @@ jobs:
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
+
           # Base
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          # Plugins (现在它们来自正确的源，可以和平共处)
+          # Plugins (它们现在都在package目录里，可以被直接找到)
           CONFIG_PACKAGE_luci-app-homeproxy=y
           CONFIG_PACKAGE_luci-app-wireguard=y
           CONFIG_PACKAGE_luci-app-reboot=y
@@ -123,5 +115,3 @@ jobs:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
 
-              
-          
