@@ -64,18 +64,18 @@ jobs:
           make defconfig
           cp .config ../$CONFIG_NAME
 
-      - name: 5.5 Download packages
+      - name: 6. Download packages
         run: |
           cd immortalwrt
           make download -j8
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 6. Compile the firmware
+      - name: 7. Compile the firmware
         run: |
           cd immortalwrt
           make -j$(nproc) || make -j1 V=s
 
-      - name: 7. Package firmware
+      - name: 8. Package firmware
         run: |
           # 路径已从 filogic 修改为 mt7986
           cd immortalwrt/bin/targets/mediatek/mt7986
@@ -83,7 +83,7 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../$FIRMWARE_NAME-$FIRMWARE_DATE.bin \;
           
-      - name: 8. Upload firmware artifact
+      - name: 9. Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
@@ -91,7 +91,7 @@ jobs:
           path: immortalwrt/bin/targets/mediatek/mt7986/*.bin
 
 
-      - name: 9. Upload .config file artifact
+      - name: 10. Upload .config file artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
