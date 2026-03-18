@@ -1,7 +1,3 @@
-#
-# OpenClaw 极速优化版 MTK 编译工作流
-# 核心特性: ccache 缓存加速 + 完美适配 6.6 闭源驱动 + 失败日志自动提取
-#
 
 name: Build ImmortalWrt for MT7986 xdr6088 (Ultimate Speed Edition)
 
