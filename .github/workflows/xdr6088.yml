@@ -45,26 +45,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ccache-
 
-      - name: 5. ✨ Generate the ULTIMATE .config file (Using Author's Defconfig)
+      - name: 5. ✨ Generate the ULTIMATE .config file
         run: |
+          chmod +x ./diy.sh
           cd immortalwrt
           
-          # 1. 核心破局：直接复制作者调教好的 MT7986 完美闭源驱动模板
-          cp -f defconfig/mt7986-ax6000.config .config
+          # 第一步：铺上你从虚拟机提取的完美“硬件底盘”，保证闭源驱动不死机
+          cp ../xdr6088.config .config
           
-          # 2. 在完美模板的基础上，追加我们专属的 XDR6088 设定和必要插件
-          cat >> .config <<EOF
+          # 第二步：运行你的 diy.sh，把你想加的插件和 IP 动态注入到底盘上！
+          ../diy1.sh
           
-          # 覆盖/追加目标设备为 XDR6088
-          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
-          
-          # 基础 UI 界面 (模板里可能没包含，保险起见加上)
-          CONFIG_PACKAGE_luci=y
-          CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          CONFIG_PACKAGE_luci-app-reboot=y
-          EOF
-          
-          # 3. 运行 defconfig，让引擎将模板和我们的追加要求完美融合
+          # 第三步：引擎融合！系统会自动把你追加的插件和底层驱动完美融合，并补齐缺少的依赖
           make defconfig
           cp .config ../$CONFIG_NAME
           
