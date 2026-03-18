@@ -1,9 +1,9 @@
 #
-# OpenClaw 为您打造的【模仿最终版】MTK平台编译工作流
-# 策略: 完全模仿社区成熟项目的成功实践，保证成功率
+# OpenClaw 为您打造的【精简终极版】MTK平台编译工作流
+# 策略: 只编译最基础的系统和LuCI，建立一个100%成功的基线
 #
 
-name: Build ImmortalWrt for MT7986 (Imitation of Success)
+name: Build ImmortalWrt for MT7986 (Minimal Baseline)
 
 on:
   workflow_dispatch:
@@ -12,11 +12,8 @@ env:
   OPENWRT_SOURCE: https://github.com/sagehou/immortalwrt-mt798x-6.6
   OPENWRT_BRANCH: "2410"
   DEVICE_PROFILE: tplink_tl-xdr6088
-  CONFIG_NAME: xdr6088.config
-  FIRMWARE_NAME: immortalwrt-mt7986-xdr6088
-  
-  # DIY脚本的URL - 这是模仿策略的核心
-  DIY_SCRIPT_URL: https://raw.githubusercontent.com/P3TERX/Actions-OpenWrt/master/diy-part2.sh
+  CONFIG_NAME: xdr6088-minimal.config
+  FIRMWARE_NAME: immortalwrt-mt7986-xdr6088-minimal
 
 jobs:
   build:
@@ -36,66 +33,58 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
           cd immortalwrt
-          
-      # --- 【核心模仿点】 ---
-      - name: 4. ✨ Load custom configuration and plugins
+
+      # --- 【核心精简点】 ---
+      - name: 4. ✨ Load ONLY default configurations
         run: |
           cd immortalwrt
 
-          # 添加自定义插件源 (这是社区验证过的、正确的“仪式”)
-          echo 'src-git small https://github.com/kenzok8/small' >> feeds.conf.default
-          echo 'src-git homeproxy https://github.com/immortalwrt-community/homeproxy.git' >> feeds.conf.default
-          
-          # 运行官方脚本，更新并安装所有Feeds
+          # 我们不再添加任何第三方源，只使用源码自带的官方feeds
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 下载并运行一个通用的DIY脚本，它会做一些兼容性修复
-          wget -O diy-part2.sh $DIY_SCRIPT_URL
-          chmod +x diy-part2.sh
-          ./diy-part2.sh
-
-          # 生成最终的配置文件
+      - name: 5. ✨ Generate a minimal .config file
+        run: |
+          cd immortalwrt
           rm -f .config
           cat > .config <<EOF
+          # Target
           CONFIG_TARGET_mediatek=y
           CONFIG_TARGET_mediatek_filogic=y
           CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
+          
+          # Base System & LuCI ONLY
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
-          CONFIG_PACKAGE_luci-app-homeproxy=y
-          CONFIG_PACKAGE_luci-app-wireguard=y
-          CONFIG_PACKAGE_luci-app-reboot=y
-          CONFIG_PACKAGE_luci-app-passwall2=y
-          CONFIG_PACKAGE_luci-app-openclash=y
-          CONFIG_PACKAGE_luci-app-zerotier=y
+          CONFIG_PACKAGE_luci-app-reboot=y # 保留一个最基础的核心应用
           EOF
           
-          # 最后，让系统自己去修正和完善配置文件
+          # 让系统自己去修正和完善配置文件
           make defconfig
           cp .config ../$CONFIG_NAME
 
-      # 后续步骤保持不变
-      - name: 5. Compile the firmware
+      # 后续步骤简化并保持
+      - name: 6. Compile the firmware
         run: |
           cd immortalwrt
           make -j$(nproc) || make -j1 V=s
 
-      - name: 6. Package firmware
+      - name: 7. Package firmware
         run: |
           cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../$FIRMWARE_NAME-$FIRMWARE_DATE.bin \;
           
-      - name: 7. Upload firmware artifact
+      - name: 8. Upload firmware artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
           path: immortalwrt/bin/targets/mediatek/filogic/*.bin
 
-      - name: 8. Upload .config file artifact
+      - name: 9. Upload .config file artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
+
