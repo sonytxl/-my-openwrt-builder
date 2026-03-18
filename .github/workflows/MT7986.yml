@@ -10,7 +10,7 @@ on:
 
 env:
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
-  OPENWRT_BRANCH: "2410" 
+  OPENWRT_BRANCH: "openwrt-24.10-6.6" 
 
   DEVICE_PROFILE: tplink_tl-xdr6088
   CONFIG_NAME: xdr6088-hnat.config
