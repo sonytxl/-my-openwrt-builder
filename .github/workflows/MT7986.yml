@@ -1,6 +1,6 @@
 #
 # OpenClaw 为您打造的【终极版】MTK平台编译工作流
-# 策略: 在您最终的指引下，注入HNAT/WED硬件加速的灵魂！
+# 策略: 完美适配 padavanonly 6.6 闭源分支，注入HNAT/WED硬件加速的灵魂！
 #
 
 name: Build ImmortalWrt for MT7986 (Ultimate HNAT Edition)
@@ -24,6 +24,16 @@ jobs:
       - name: 1. Checkout
         uses: actions/checkout@v4
 
+      - name: 1.5. Free Disk Space (Ubuntu)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          swap-storage: true
+
       - name: 2. Initialization environment
         run: |
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
@@ -46,15 +56,13 @@ jobs:
           cd immortalwrt
           rm -f .config
           cat > .config <<EOF
-          # Target - 注意：闭源源码库必须使用 mt7986，不能是 filogic！
+          # Target - 6.6 闭源分支必须用回 filogic
           CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_mt7986=y
-          CONFIG_TARGET_mediatek_mt7986_DEVICE_tplink_tl-xdr6088=y
+          CONFIG_TARGET_mediatek_filogic=y
+          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
 
-          # ⚠️ 关键说明：在 padavanonly 的源码中，闭源 WIFI 和 HNAT 
-          # 驱动在选择 xdr6088 设备后是作为 MTK SDK 的一部分默认开启的。
-          # 这里千万不要手动添加 kmod-mtk-wed 或 kmod-mtk-hnat，
-          # 否则会引发严重依赖冲突！只需保留您需要的应用：
+          # ⚠️ 极其重要：千万不要在这里手动添加 HNAT、WED 或闭源 WiFi 的包名！
+          # 在 padavanonly 源码中，只要如上选对 xdr6088，闭源驱动和加速是默认开启的！
 
           # Base System & LuCI
           CONFIG_PACKAGE_luci=y
@@ -77,8 +85,8 @@ jobs:
 
       - name: 8. Package firmware
         run: |
-          # 路径已从 filogic 修改为 mt7986
-          cd immortalwrt/bin/targets/mediatek/mt7986
+          # 路径已改回 filogic
+          cd immortalwrt/bin/targets/mediatek/filogic
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../$FIRMWARE_NAME-$FIRMWARE_DATE.bin \;
@@ -87,14 +95,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
-          # 路径已从 filogic 修改为 mt7986
-          path: immortalwrt/bin/targets/mediatek/mt7986/*.bin
-
+          # 路径已改回 filogic
+          path: immortalwrt/bin/targets/mediatek/filogic/*.bin
 
       - name: 10. Upload .config file artifact
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.CONFIG_NAME }}
           path: ./${{ env.CONFIG_NAME }}
-
-
