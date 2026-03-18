@@ -46,20 +46,16 @@ jobs:
           cd immortalwrt
           rm -f .config
           cat > .config <<EOF
-          # Target
+          # Target - 注意：闭源源码库必须使用 mt7986，不能是 filogic！
           CONFIG_TARGET_mediatek=y
-          CONFIG_TARGET_mediatek_filogic=y
-          CONFIG_TARGET_mediatek_filogic_DEVICE_tplink_tl-xdr6088=y
+          CONFIG_TARGET_mediatek_mt7986=y
+          CONFIG_TARGET_mediatek_mt7986_DEVICE_tplink_tl-xdr6088=y
 
-          # --- 【灵魂与躯体：同时启用硬件加速及其底层依赖】---
-          # 1. 启用硬件加速包
-          CONFIG_HW_FLOW_OFFLOADING=y
-          CONFIG_PACKAGE_kmod-mtk-hnat=y
-          CONFIG_PACKAGE_kmod-mtk-wed=y
-          
-          # 2. 启用它们依赖的底层内核功能 (这才是我们失败的关键)
-          CONFIG_DMA_SHARED_BUFFER=y
-          
+          # ⚠️ 关键说明：在 padavanonly 的源码中，闭源 WIFI 和 HNAT 
+          # 驱动在选择 xdr6088 设备后是作为 MTK SDK 的一部分默认开启的。
+          # 这里千万不要手动添加 kmod-mtk-wed 或 kmod-mtk-hnat，
+          # 否则会引发严重依赖冲突！只需保留您需要的应用：
+
           # Base System & LuCI
           CONFIG_PACKAGE_luci=y
           CONFIG_PACKAGE_luci-i18n-base-zh-cn=y
@@ -68,6 +64,12 @@ jobs:
           make defconfig
           cp .config ../$CONFIG_NAME
 
+      - name: 5.5 Download packages
+        run: |
+          cd immortalwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+
       - name: 6. Compile the firmware
         run: |
           cd immortalwrt
@@ -75,7 +77,8 @@ jobs:
 
       - name: 7. Package firmware
         run: |
-          cd immortalwrt/bin/targets/mediatek/filogic
+          # 路径已从 filogic 修改为 mt7986
+          cd immortalwrt/bin/targets/mediatek/mt7986
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           find . -name "*tplink_tl-xdr6088*.bin" -exec mv {} ../$FIRMWARE_NAME-$FIRMWARE_DATE.bin \;
@@ -84,7 +87,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}-${{ env.DEVICE_PROFILE }}
-          path: immortalwrt/bin/targets/mediatek/filogic/*.bin
+          # 路径已从 filogic 修改为 mt7986
+          path: immortalwrt/bin/targets/mediatek/mt7986/*.bin
 
 
       - name: 9. Upload .config file artifact
