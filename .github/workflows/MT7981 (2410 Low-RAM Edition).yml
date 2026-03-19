@@ -29,8 +29,8 @@ jobs:
           sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
           
-          # ⚠️ 核心修复：强制创建 8GB 虚拟内存 (Swap)，防止编译 Rust/LLVM 时内存撑爆
-          sudo fallocate -l 8G /swapfile
+          # ⚠️ 核心修复：强制创建 5GB 虚拟内存 (Swap)，防止编译 Rust/LLVM 时内存撑爆
+          sudo fallocate -l 5G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
