@@ -7,10 +7,8 @@ permissions:
   contents: write
 
 env:
-  # ⚠️ 注意：请确认这个仓库链接里是否有 2410 分支。
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
   OPENWRT_BRANCH: "2410" 
-
   CONFIG_NAME: mt7981-2410.config
   FIRMWARE_NAME: immortalwrt-mt7981-2410
 
@@ -22,28 +20,35 @@ jobs:
       - name: 1. Checkout
         uses: actions/checkout@v4
 
-      - name: 2. Free Disk Space & Init Environment
+      - name: 2. 🧹 Maximize Build Space
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          android: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: false
+
+      - name: 3. ⚙️ Init Environment & Create Swap
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
-          sudo docker image prune --all --force
-          
-          # ⚠️ 核心修复：强制创建 5GB 虚拟内存 (Swap)，防止编译 Rust/LLVM 时内存撑爆
+          # 创建 5GB 虚拟内存以应对 Rust 编译
           sudo fallocate -l 5G /swapfile
           sudo chmod 600 /swapfile
           sudo mkswap /swapfile
           sudo swapon /swapfile
           
           sudo -E apt-get -qq update
-          # ⚠️ 补充安装 clang 和 llvm 等 Rust 编译极度依赖的底层组件
           sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
-      
-      - name: 3. Clone Correct OpenWrt source code
+
+      - name: 4. Clone Correct OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. Setup ccache
+      - name: 5. Setup ccache
         uses: actions/cache@v4
         with:
           path: ~/.ccache
@@ -51,21 +56,19 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-2410-ccache-
 
-      - name: 5. Load Feeds configurations
+      - name: 6. Load Feeds configurations
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 6. ✨ Generate the ULTIMATE .config file (Multi-Device)
+      - name: 7. ✨ Generate the ULTIMATE .config file (Multi-Device)
         run: |
           chmod +x ./diy.sh
           cd immortalwrt
           
-          # 第一步：铺上你导出的 2410 分支 MT7981 完美底盘
           cp ../$CONFIG_NAME .config
           
-          # 第二步：虽然你的 config 里已经包含了 4 个设备，这里为求保险再强制追加一次声明
           cat >> .config <<EOF
           CONFIG_TARGET_MULTI_PROFILE=y
           CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_rax3000m=y
@@ -74,19 +77,18 @@ jobs:
           CONFIG_TARGET_mediatek_mt7981_DEVICE_mt7981-360-t7-108M=y
           EOF
           
-          # 第三步：运行 diy.sh 注入插件和修改 IP
           ../diy.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
-      - name: 7. Download packages
+      - name: 8. Download packages
         run: |
           cd immortalwrt
           make download -j8
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 8. Compile the firmware
+      - name: 9. Compile the firmware
         id: compile
         run: |
           cd immortalwrt
@@ -97,17 +99,16 @@ jobs:
             exit 1
           }
 
-      - name: 9. Upload build logs on failure
+      - name: 10. Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: OpenWrt_compile_error_log
           path: immortalwrt/compile_error.log
           
-      - name: 10. Package firmware
+      - name: 11. Package firmware
         if: success()
         run: |
-          # ⚠️ 2410 分支的打包路径变成了 mt7981
           cd immortalwrt/bin/targets/mediatek/mt7981
           rm -rf packages
           FIRMWARE_DATE=$(date +%Y-%m-%d)
@@ -117,13 +118,13 @@ jobs:
           cd firmware_release
           for f in *.bin; do mv "$f" "mt7981-2410-${FIRMWARE_DATE}-${f}"; done
           
-      - name: 11. Generate release tag
+      - name: 12. Generate release tag
         if: success()
         run: |
           echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
           
-      - name: 12. Upload firmware to Release
+      - name: 13. Upload firmware to Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
