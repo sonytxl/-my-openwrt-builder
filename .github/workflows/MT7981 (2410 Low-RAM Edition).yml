@@ -1,0 +1,135 @@
+name: Build ImmortalWrt for MT7981 (2410 Low-RAM Edition)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # ⚠️ 注意：请确认这个仓库链接里是否有 2410 分支。
+  # 如果老版本源码在别的仓库（比如 padavanonly/immortalwrt），请修改这里！
+  OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
+  OPENWRT_BRANCH: "2410" 
+
+  CONFIG_NAME: mt7981-2410.config
+  FIRMWARE_NAME: immortalwrt-mt7981-2410
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v4
+
+      - name: 2. Free Disk Space & Init Environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
+
+      - name: 3. Clone Correct OpenWrt source code
+        run: |
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+
+      - name: 4. Setup ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: ${{ runner.os }}-openwrt-2410-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-2410-ccache-
+
+      - name: 5. Load Feeds configurations
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+      - name: 6. ✨ Generate the ULTIMATE .config file (Multi-Device)
+        run: |
+          chmod +x ./diy.sh
+          cd immortalwrt
+          
+          # 第一步：铺上你导出的 2410 分支 MT7981 完美底盘
+          cp ../$CONFIG_NAME .config
+          
+          # 第二步：虽然你的 config 里已经包含了 4 个设备，这里为求保险再强制追加一次声明
+          cat >> .config <<EOF
+          CONFIG_TARGET_MULTI_PROFILE=y
+          CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_rax3000m=y
+          CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_xr30=y
+          CONFIG_TARGET_mediatek_mt7981_DEVICE_jcg_q30=y
+          CONFIG_TARGET_mediatek_mt7981_DEVICE_mt7981-360-t7-108M=y
+          EOF
+          
+          # 第三步：运行 diy.sh 注入插件和修改 IP
+          ../diy.sh
+          
+          make defconfig
+          cp .config ../$CONFIG_NAME-build
+
+      - name: 7. Download packages
+        run: |
+          cd immortalwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+
+      - name: 8. Compile the firmware
+        id: compile
+        run: |
+          cd immortalwrt
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || {
+            echo "多线程编译失败，正在使用单线程生成详细日志..."
+            make -j1 V=s 2>&1 | tee compile_error.log
+            exit 1
+          }
+
+      - name: 9. Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_compile_error_log
+          path: immortalwrt/compile_error.log
+          
+      - name: 10. Package firmware
+        if: success()
+        run: |
+          # ⚠️ 2410 分支的打包路径变成了 mt7981
+          cd immortalwrt/bin/targets/mediatek/mt7981
+          rm -rf packages
+          FIRMWARE_DATE=$(date +%Y-%m-%d)
+          mkdir -p firmware_release
+          
+          find . -type f -name "*.bin" -exec mv {} ./firmware_release/ \;
+          cd firmware_release
+          for f in *.bin; do mv "$f" "mt7981-2410-${FIRMWARE_DATE}-${f}"; done
+          
+      - name: 11. Generate release tag
+        if: success()
+        run: |
+          echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          
+      - name: 12. Upload firmware to Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: ${{ env.release_tag }}
+          name: 🚀 MT7981 (4合1) 极速低运存版 2410 (${{ env.release_date }})
+          files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*.bin
+          body: |
+            ## 🚀 MT7981 极速低运存版
+            - **源码分支**: `2410` (闭源内核 5.4，运存极度优化)
+            - **包含设备**: CMCC RAX3000M, CMCC XR30, JCG Q30, 360T7
+            - **核心特性**: 纯血闭源 Wi-Fi 驱动 + WED/HNAT 硬件加速
+            - **编译时间**: ${{ env.release_date }}
+            
+            **系统默认信息**:
+            - 默认 IP: 详见 `diy.sh` 设置 (通常为 `192.168.50.1`)
+            - 默认密码: `无`
