@@ -65,14 +65,14 @@ jobs:
           
       - name: 6. ✨ Generate the .config file
         run: |
-          chmod +x ./diy.sh
+          chmod +x ./diy-ipq.sh
           cd immortalwrt
           
           # 直接铺上你导出的高通底盘
           cp ../$CONFIG_NAME .config
           
           # 运行自定义脚本注入 LuCI 界面和 HomeProxy 等插件
-          ../diy.sh
+          ../diy-ipq.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
