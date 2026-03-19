@@ -71,7 +71,7 @@ jobs:
           # 直接铺上你导出的高通底盘
           cp ../$CONFIG_NAME .config
           
-          # 运行自定义脚本注入 LuCI 界面和 HomeProxy 等插件
+          # 运行自定义脚本准备源码环境
           ../diy-ipq.sh
           
           make defconfig
@@ -125,14 +125,19 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: 🚀 JDCloud AX1800 Pro 满血高通版 (${{ env.release_date }})
+          name: 🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})
           files: firmware_release/*
           body: |
             ## 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 专属固件
             - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
             - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 硬件加速
-            - **包含插件**: HomeProxy, WireGuard, ZeroTier
-            - **编译时间**: ${{ env.release_date }}
+            
+            **包含核心插件**:
+            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - 🌍 **异地组网**: WireGuard, ZeroTier
+            - 🗄️ **轻量 NAS**: Samba4, Filebrowser (绝美网页文件管理)
+            - 🎨 **界面美化**: Argon 主题 + 完美中文支持
+            - 编译时间: ${{ env.release_date }}
             
             **系统默认信息**:
             - 默认 IP: `192.168.61.1`
