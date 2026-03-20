@@ -11,7 +11,7 @@ env:
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
   # 👇 已经完美修正，确保与上游源码库分支名一字不差
   OPENWRT_BRANCH: "openwrt-24.10-6.6" 
-  CONFIG_NAME: mtk7981.config
+  CONFIG_NAME: mt7981-24.10-6.6.config
   FIRMWARE_NAME: immortalwrt-mt7981-6.6
 
 jobs:
