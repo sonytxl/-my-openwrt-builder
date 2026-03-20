@@ -20,4 +20,8 @@ rm -rf package/helloworld/naiveproxy
 # 4. 加入预编译 Rust 保底防线
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
-echo "✅ 前置环境准备完毕，完美底盘即将移交编译引擎！"
+# 5. 开启全局编译缓存 (高通提速核心！)
+echo "📦 正在开启高通全局 Ccache 编译缓存..."
+echo "CONFIG_CCACHE=y" >> .config
+
+echo "✅ 高通前置环境准备完毕，完美底盘即将移交编译引擎！"
