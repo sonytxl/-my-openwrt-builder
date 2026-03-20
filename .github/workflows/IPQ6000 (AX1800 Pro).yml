@@ -10,7 +10,7 @@ env:
   # ⚠️ 源替换为 VIKINGYFY 的高通专属源
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
   # ⚠️ 截图显示 main 分支为高通专用，带满血 NSS 驱动
-  OPENWRT_BRANCH: "main" 
+  OPENWRT_BRANCH: "main"
   CONFIG_NAME: ipq6000.config
   FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
 
@@ -52,7 +52,7 @@ jobs:
       - name: 4. Setup ccache
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
@@ -109,7 +109,6 @@ jobs:
           
           # 全局搜索常见的硬路由固件格式，统一复制到 release 文件夹
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
-          
           cd firmware_release
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           for f in *; do mv "$f" "AX1800Pro-${FIRMWARE_DATE}-${f}"; done
@@ -117,8 +116,8 @@ jobs:
       - name: 11. Generate release tag
         if: success()
         run: |
-          echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
-          echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
+          echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
           
       - name: 12. Upload firmware to Release
         uses: softprops/action-gh-release@v2
