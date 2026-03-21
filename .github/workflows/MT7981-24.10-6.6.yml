@@ -56,11 +56,11 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Setup ccache (修复缓存路径)
+      - name: 5. Setup ccache (优化云端缓存机制)
         uses: actions/cache@v4
         with:
-          path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-mt7981-ccache-${{ github.sha }}
+          path: ~/.ccache
+          key: ${{ runner.os }}-openwrt-mt7981-ccache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-openwrt-mt7981-ccache-
 
@@ -138,11 +138,14 @@ jobs:
             - **分支版本**: `openwrt-24.10-6.6`
             - **核心优势**: Linux 6.6 现代内核 + 联发科官方闭源 Wi-Fi 加速
             
-            **包含核心插件**:
-            - ✈️ **科学双擎**: SSR-Plus, HomeProxy
-            - 🌍 **异地组网**: WireGuard, ZeroTier
-            - **编译时间**: ${{ env.release_date }}
+            💡 **适配机型**:
+            - 完美支持：`CMCC RAX3000M`、`CMCC XR30`、`JCG Q30 PRO`、`360T7` 等主流 MT7981 设备。
             
-            **系统默认信息**:
+            📦 **核心功能与插件**:
+            - ✈️ **科学双擎**: SSR-Plus, HomeProxy
+            - 🌍 **异地组网**: WireGuard, ZeroTier, **Tailscale (已集成原生 Web 界面)**
+            
+            ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
             - 默认密码: `无`
+            - 编译时间: ${{ env.release_date }}
