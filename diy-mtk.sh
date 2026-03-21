@@ -2,7 +2,7 @@
 echo "🚀 开始执行 MTK 7981 编译前置任务..."
 
 # 1. 修改默认 IP
-sed -i 's/192.168.1.1/192.168.61.1/g' package/base-files/files/bin/config_generate
+sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
 # 2. 拉取 SSR-Plus 源码
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
