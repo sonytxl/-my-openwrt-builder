@@ -142,7 +142,7 @@ jobs:
             - 完美支持：`CMCC RAX3000M`、`CMCC XR30`、`JCG Q30 PRO`、`360T7` 等主流 MT7981 设备。
             
             📦 **核心功能与插件**:
-            - ✈️ **科学双擎**: SSR-Plus, HomeProxy
+            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
             - 🌍 **异地组网**: WireGuard, ZeroTier, **Tailscale (已集成原生 Web 界面)**
             
             ⚙️ **系统默认信息**:
