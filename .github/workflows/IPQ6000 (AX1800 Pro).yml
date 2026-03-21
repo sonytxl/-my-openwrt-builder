@@ -7,9 +7,7 @@ permissions:
   contents: write
 
 env:
-  # ⚠️ 源替换为 VIKINGYFY 的高通专属源
   OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
-  # ⚠️ 截图显示 main 分支为高通专用，带满血 NSS 驱动
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: ipq6000.config
   FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
@@ -26,33 +24,31 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # 1. 强力清理 C 盘 (根目录) 给 OpenWrt 源码腾空间
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
           sudo docker image prune --all --force
           
-          # 2. 🚀 利用 /mnt 盘创建 10GB Swap，高通编译极其吃内存！
           sudo fallocate -l 10G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile
           sudo mkswap /mnt/swapfile
           sudo swapon /mnt/swapfile
           
-          # 3. ⚡ 提前给宿主机安装最新版官方 Rust
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # 4. 安装编译依赖
+          # ⚠️ 注意这里：强制给 Ubuntu 环境安装了 ccache
           sudo -E apt-get -qq update
-          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
+          sudo -E apt-get -qq install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. Setup ccache
+      - name: 4. Setup ccache (高通专属系统级路径)
         uses: actions/cache@v4
         with:
-          path: immortalwrt/.ccache
+          # ⚠️ 路径改回了老版本的系统根目录
+          path: ~/.ccache
           key: ${{ runner.os }}-openwrt-ipq6000-ccache-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq6000-ccache-
@@ -68,10 +64,7 @@ jobs:
           chmod +x ./diy-ipq.sh
           cd immortalwrt
           
-          # 直接铺上你导出的高通底盘
           cp ../$CONFIG_NAME .config
-          
-          # 运行自定义脚本准备源码环境
           ../diy-ipq.sh
           
           make defconfig
@@ -88,9 +81,10 @@ jobs:
         run: |
           cd immortalwrt
           echo -e "$(nproc) thread compile"
-          make -j$(nproc) || {
+          # ⚠️ 终极保险：强行在 make 时指定缓存目录变量
+          make -j$(nproc) CCACHE_DIR=~/.ccache || {
             echo "多线程编译失败，正在使用单线程生成详细日志..."
-            make -j1 V=s 2>&1 | tee compile_error.log
+            make -j1 V=s CCACHE_DIR=~/.ccache 2>&1 | tee compile_error.log
             exit 1
           }
 
@@ -104,10 +98,7 @@ jobs:
       - name: 10. Package firmware
         if: success()
         run: |
-          # ⚠️ 针对高通的全局智能提取打包方案
           mkdir -p firmware_release
-          
-          # 全局搜索常见的硬路由固件格式，统一复制到 release 文件夹
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
           cd firmware_release
           FIRMWARE_DATE=$(date +%Y-%m-%d)
@@ -124,7 +115,7 @@ jobs:
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
-          name: 🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})
+          name: "🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
             ## 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 专属固件
