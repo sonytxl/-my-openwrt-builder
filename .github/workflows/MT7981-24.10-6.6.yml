@@ -7,9 +7,7 @@ permissions:
   contents: write
 
 env:
-  # ⚠️ 替换为 padavanonly 最新的 6.6 闭源驱动分支
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
-  # 👇 已经完美修正，确保与上游源码库分支名一字不差
   OPENWRT_BRANCH: "openwrt-24.10-6.6" 
   CONFIG_NAME: mt7981-24.10-6.6.config
   FIRMWARE_NAME: immortalwrt-mt7981-6.6
@@ -36,18 +34,15 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          # 🚀 挂载 10G Swap 防爆内存 (高并发编译刚需)
           sudo fallocate -l 10G /mnt/swapfile
           sudo chmod 600 /mnt/swapfile
           sudo mkswap /mnt/swapfile
           sudo swapon /mnt/swapfile
           
-          # ⚡ 提前给宿主机安装最新版官方 Rust
           curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # 安装编译依赖
           sudo rm -rf /etc/apt/sources.list.d/*
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
@@ -56,10 +51,10 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Setup ccache (优化云端缓存机制)
+      - name: 5. Setup ccache (保卫 500MB 缓存)
         uses: actions/cache@v4
         with:
-          path: ~/.ccache
+          path: immortalwrt/.ccache
           key: ${{ runner.os }}-openwrt-mt7981-ccache-${{ github.run_id }}
           restore-keys: |
             ${{ runner.os }}-openwrt-mt7981-ccache-
@@ -75,13 +70,9 @@ jobs:
           chmod +x ./diy-mtk.sh
           cd immortalwrt
           
-          # 铺上你的精简版图纸
           cp ../$CONFIG_NAME .config
-          
-          # 运行 MTK 专属的前置脚本 (拉取插件源码 + 删 Rust)
           ../diy-mtk.sh
           
-          # 自动补全依赖
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
@@ -112,7 +103,6 @@ jobs:
       - name: 11. Package firmware
         if: success()
         run: |
-          # ⚠️ 全局智能提取，无视路径变化
           mkdir -p firmware_release
           find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
           cd firmware_release
