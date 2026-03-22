@@ -131,9 +131,9 @@ jobs:
             💡 **适配机型**:
             - 完美支持：`TP-Link TL-XDR6088` (128M 大分区版)
             
-            📦 **核心功能**:
+            📦 **核心功能与插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
-            - *已移除 Tailscale 以节约运行内存*
+            - 🌍 **异地组网**: WireGuard, ZeroTier
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
