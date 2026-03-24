@@ -2,6 +2,9 @@ name: Build ImmortalWrt for IPQ6000 (AX1800 Pro)
 
 on:
   workflow_dispatch:
+  schedule:
+    # 对应北京时间每月 2 号凌晨 00:00 (UTC 时间 1 号 16:00)
+    - cron: '0 16 1 * *'
 
 permissions:
   contents: write
@@ -11,7 +14,7 @@ env:
   OPENWRT_BRANCH: "main"
   CONFIG_NAME: ipq6000.config
   FIRMWARE_NAME: immortalwrt-jdcloud-ax1800-pro
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 👈 加上这行魔法代码，提前拥抱 Node 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 👈 提前拥抱 Node 24，消灭强迫症黄牌警告
   
 jobs:
   build:
