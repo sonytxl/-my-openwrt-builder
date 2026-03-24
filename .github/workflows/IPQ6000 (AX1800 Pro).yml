@@ -128,7 +128,7 @@ jobs:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
-            - 🗄️ **轻量 NAS**: Samba4, Filebrowser (绝美网页文件管理)
+            - 🗄️ **轻量 NAS**: Samba4
             - 🎨 **界面美化**: Argon 主题 + 完美中文支持
             
             ⚙️ **系统默认信息**:
