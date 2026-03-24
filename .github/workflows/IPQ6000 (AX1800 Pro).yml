@@ -121,7 +121,7 @@ jobs:
           name: "🚀 JDCloud AX1800 Pro 闭源满血双擎版 (${{ env.release_date }})"
           files: firmware_release/*
           body: |
-            ## 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 专属固件
+            ## 🚀 京东云亚瑟 (JDCloud AX1800 Pro) 专属固件（每月2号自动编译更新）
             - **源码仓库**: `VIKINGYFY/immortalwrt` (main 分支)
             - **核心特性**: 纯血高通闭源 Wi-Fi 驱动 + NSS 硬件加速
             
