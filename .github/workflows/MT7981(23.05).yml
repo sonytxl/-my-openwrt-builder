@@ -132,8 +132,8 @@ jobs:
             - **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
             - **包含设备**: CMCC RAX3000M, CMCC XR30, JCG Q30, 360T7
             - **核心特性**: 纯血闭源 Wi-Fi 驱动 + WED/HNAT 硬件加速，完美兼容最新 HomeProxy & SSR+
-            - **编译时间**: ${{ env.release_date }}
             
-            **系统默认信息**:
-            - 默认 IP: 详见 `diy.sh` 设置
+            ⚙️ **系统默认信息**:
+            - 默认 IP: `192.168.51.1`
             - 默认密码: `无`
+            - 编译时间: ${{ env.release_date }}
