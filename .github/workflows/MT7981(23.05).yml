@@ -40,49 +40,57 @@ jobs:
           export PATH="$HOME/.cargo/bin:$PATH"
           rustc --version
           
-          # 4. 安装编译依赖
-          sudo -E apt-get -qq update
-          sudo -E apt-get -qq install -y ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
+          # 4. 安装编译依赖 (已补全 ccache)
+          sudo -E apt-get update
+          sudo -E apt-get install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd
 
       - name: 3. Clone Correct OpenWrt source code
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 4. Load Feeds configurations
+      - name: 4. Cache Downloaded Packages (dl)
+        uses: actions/cache@v4
+        with:
+          path: immortalwrt/dl
+          # 改为 run_id 强制每次编译后上传最新缓存
+          key: ${{ runner.os }}-openwrt-dl-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-
+
+      - name: 5. Cache Ccache
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          # 改为 run_id 强制每次编译后上传最新缓存
+          key: ${{ runner.os }}-openwrt-ccache-${{ github.run_id }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ccache-
+
+      - name: 6. Load Feeds configurations
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 5. ✨ Generate the ULTIMATE .config file (Multi-Device)
+      - name: 7. ✨ Generate the ULTIMATE .config file
         run: |
-          # 容错处理：如果有 diy.sh 才赋予权限
           [ -f ./diy-mtk-2305.sh ] && chmod +x ./diy-mtk-2305.sh
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
           
-          # 追加多设备配置 (23.05 下这些设备代号通常是一致的)
-          cat >> .config <<EOF
-          CONFIG_TARGET_MULTI_PROFILE=y
-          CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_rax3000m=y
-          CONFIG_TARGET_mediatek_mt7981_DEVICE_jcg_q30=y
-          CONFIG_TARGET_mediatek_mt7981_DEVICE_mt7981-360-t7-108M=y
-          EOF
-          
-          # 容错处理：如果有 diy.sh 才执行
           [ -f ../diy-mtk-2305.sh ] && ../diy-mtk-2305.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
-      - name: 6. Download packages
+      - name: 8. Download packages
         run: |
           cd immortalwrt
           make download -j8
           find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 7. Compile the firmware
+      - name: 9. Compile the firmware
         id: compile
         run: |
           cd immortalwrt
@@ -93,14 +101,14 @@ jobs:
             exit 1
           }
 
-      - name: 8. Upload build logs on failure
+      - name: 10. Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: OpenWrt_compile_error_log
           path: immortalwrt/compile_error.log
           
-      - name: 9. Package firmware
+      - name: 11. Package firmware
         if: success()
         run: |
           cd immortalwrt/bin/targets/mediatek/mt7981
@@ -108,24 +116,25 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           mkdir -p firmware_release
           
-          find . -type f -name "*.bin" -exec mv {} ./firmware_release/ \;
+          # 通杀 .bin, .img, .itb 所有可能的固件格式
+          find . -type f \( -name "*.bin" -o -name "*.img" -o -name "*.itb" \) -exec mv {} ./firmware_release/ \;
           cd firmware_release
-          # 改名逻辑适配 23.05
-          for f in *.bin; do mv "$f" "mt7981-23.05-${FIRMWARE_DATE}-${f}"; done
+          for f in *; do mv "$f" "mt7981-23.05-${FIRMWARE_DATE}-${f}"; done
           
-      - name: 10. Generate release tag
+      - name: 12. Generate release tag
         if: success()
         run: |
           echo "release_tag=$(date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           echo "release_date=$(date +"%Y-%m-%d")" >> $GITHUB_ENV
           
-      - name: 11. Upload firmware to Release
+      - name: 13. Upload firmware to Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
           tag_name: ${{ env.release_tag }}
           name: 🚀 MT7981 (3合1) 稳定版 23.05 (${{ env.release_date }})
-          files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*.bin
+          # 改为抓取所有文件，不再只抓取 .bin
+          files: immortalwrt/bin/targets/mediatek/mt7981/firmware_release/*
           body: |
             ## 🚀 MT7981 黄金稳定版
             - 🚀 **源码分支**: `openwrt-23.05` (内核 5.15，低运存占用)
@@ -133,7 +142,7 @@ jobs:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
-             
+            
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
             - 默认密码: `无`
