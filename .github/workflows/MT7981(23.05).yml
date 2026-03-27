@@ -66,7 +66,6 @@ jobs:
           cat >> .config <<EOF
           CONFIG_TARGET_MULTI_PROFILE=y
           CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_rax3000m=y
-          CONFIG_TARGET_mediatek_mt7981_DEVICE_cmcc_xr30=y
           CONFIG_TARGET_mediatek_mt7981_DEVICE_jcg_q30=y
           CONFIG_TARGET_mediatek_mt7981_DEVICE_mt7981-360-t7-108M=y
           EOF
