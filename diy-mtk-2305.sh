@@ -8,7 +8,7 @@ sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_genera
 
 # 2. 修改默认主机名
 echo "🏷️ 正在修改默认主机名为 Ecom-Gateway..."
-sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate 
+sed -i 's/ImmortalWrt/Ecom-Gateway/g' package /base-files/files/bin/config_generate 
 
 # 3. 注入 SSR-Plus 源码
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
