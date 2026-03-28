@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash  20260328-2042
 # 自动获取北京时间，防止脚本版本混淆
 BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
 echo "🚀 开始执行 MTK 7981 终极量产白金版 (sbwml 稳定版) - 当前北京时间: $BJ_TIME"
