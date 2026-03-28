@@ -31,31 +31,4 @@ rm -rf package/helloworld/xray-plugin
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-# 6. 设置默认密码与统一 WiFi (前天的原生版本)
-mkdir -p package/base-files/files/etc/uci-defaults
-cat << "EOF" > package/base-files/files/etc/uci-defaults/99-ecom-setup
-#!/bin/sh
 
-sed -i 's/^\(root:\)[^:]*:/\1$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:/' /etc/shadow
-
-sleep 3
-if [ -f /etc/config/wireless ]; then
-    for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${iface}.ssid='Ecom-WiFi'
-        uci set wireless.${iface}.encryption='psk2'
-        uci set wireless.${iface}.key='password'
-    done
-    
-    for radio in $(uci show wireless | grep "=wifi-device" | cut -d'.' -f2 | cut -d'=' -f1); do
-        uci set wireless.${radio}.disabled='0'
-    done
-    
-    uci commit wireless
-    wifi reload
-fi
-
-rm -f /etc/uci-defaults/99-ecom-setup
-exit 0
-EOF
-
-chmod +x package/base-files/files/etc/uci-defaults/99-ecom-setup
