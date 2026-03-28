@@ -76,9 +76,15 @@ jobs:
           cd immortalwrt
           cp ../$CONFIG_NAME .config
           
-          # 🚀 终极防弹执行法：强制调用 bash 解释器，彻底无视 Windows/网页端带来的权限丢失问题！
+          # 1. 🚀 终极防弹执行法：强制调用 bash 解释器，彻底无视 Windows/网页端带来的权限丢失问题！
           [ -f ../diy-mtk-2305.sh ] && bash ../diy-mtk-2305.sh
           
+          # 2. ⚡ 终极洗脑大招：干掉幽灵缓存，强制系统重新认识 Go 1.23 和新版组件！⚡
+          echo "🧹 正在清除系统旧缓存并重新挂载插件索引..."
+          rm -rf tmp/
+          ./scripts/feeds install -a
+          
+          # 3. 重新生成完美的配置
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
