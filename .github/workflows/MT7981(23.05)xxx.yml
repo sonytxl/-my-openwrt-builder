@@ -1,4 +1,4 @@
-name: Build ImmortalWrt for MT7981 (23.05 Stable Edition)
+name: Build ImmortalWrt for MT7981xxx (23.05 Stable Edition)
 
 on:
   workflow_dispatch:
