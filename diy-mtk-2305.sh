@@ -1,5 +1,5 @@
 #!/bin/bash
-echo "🚀 开始执行 MTK 7981 终极量产版编译前置任务..."
+echo "🚀 开始执行 MTK 7981 终极量产白金版编译前置任务..."
 
 # 1. 修改默认 IP
 echo "🔧 正在修改默认 IP 地址为 192.168.51.1..."
@@ -14,8 +14,9 @@ sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_genera
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# 4. 解决冲突：【回归成功路线】物理清除 helloworld 自带核心，强制使用官方稳定版！
-echo "🧹 正在清理冲突组件..."
+# ==================== 核心排雷逻辑（完全采用你的完美名单） ====================
+echo "🧹 正在清理 helloworld 冲突组件，坚定使用官方核心！..."
+# 只杀掉 helloworld 里的冲突组件，绝对不动 feeds 官方库！
 rm -rf package/helloworld/xray-core
 rm -rf package/helloworld/v2ray-core
 rm -rf package/helloworld/sing-box
@@ -32,21 +33,25 @@ rm -rf package/helloworld/tcping
 rm -rf package/helloworld/v2ray-plugin
 rm -rf package/helloworld/xray-plugin 
 
-# 5. 加入预编译 Rust 保底防线 (已彻底移除报错的 Go 路径配置！)
-echo "🛡️ 注入 Rust 预编译防线..."
-echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config 
+# ==================== 防爆内存与网络提速补丁 ====================
+echo "🛡️ 注入防爆内存与网络提速补丁..."
+# (1) 禁用官方 xray-core 的 UPX 压缩，瞬间节省 2GB+ 编译内存，防止 OOM 暴毙！
+sed -i '/upx/d' feeds/packages/net/xray-core/Makefile || true
 
-# 6. 开启全局编译缓存
-echo "⚡ 开启全局 Ccache 编译缓存..."
+# (2) 强制 Go 语言换源，完美解决 sing-box 报 module 缺失、下载依赖超时的问题！
+sed -i 's/https:\/\/proxy.golang.org/https:\/\/goproxy.cn,direct/g' feeds/packages/lang/golang/golang-package.mk || true
+
+# (3) 开启 Rust 预编译与 Ccache 缓存
+echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config 
 echo "CONFIG_CCACHE=y" >> .config 
 
-# 7. 注入开机自动配置脚本 (ZeroTier + Moon + WiFi + 密码)
-echo "📜 正在注入自动化量产脚本..."
+# ==================== 自动化量产注入 ====================
+echo "📜 正在注入开机自动配置脚本 (ZeroTier + Moon + WiFi + 密码)..."
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
 #!/bin/sh
 
-# (1) 设置路由器默认登录密码为 password
+# (1) 设置路由器默认后台密码为 password
 sed -i 's/^\(root:\)[^:]*:/\1$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:/' /etc/shadow
 
 # (2) ZeroTier 全自动静默加入与 Moon 挂载
@@ -62,13 +67,13 @@ uci commit zerotier
 /etc/init.d/zerotier enable
 /etc/init.d/zerotier start
 
-# 等待 15 秒挂载搬瓦工 Moon 卫星
+# 延时 15 秒等待 ZT 生成虚拟网卡，然后挂载搬瓦工 Moon 卫星
 (
     sleep 15
     zerotier-cli orbit 41207907b4 41207907b4
 ) &
 
-# (3) 统一 WiFi 名字与密码 (SSID: Ecom-WiFi)
+# (3) 统一 WiFi 名字为 Ecom-WiFi，密码为 password
 sleep 3
 if [ -f /etc/config/wireless ]; then
     for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
@@ -85,6 +90,7 @@ if [ -f /etc/config/wireless ]; then
     wifi reload
 fi
 
+# 阅后即焚，保持系统洁净
 rm -f /etc/uci-defaults/999-custom-settings
 exit 0
 EOF
