@@ -6,7 +6,7 @@ sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_genera
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 
 # 2. 修改默认主机名
-sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
+sed -i 's/ImmortalWrt/Ecom-7981/g' package/base-files/files/bin/config_generate
 
 # ==================== ☢️ 核心换源破局 ☢️ ====================
 # 3. 放弃老旧的 fw876，拉取 sbwml 的 v5 稳定版！
@@ -25,8 +25,11 @@ rm -rf feeds/packages/net/v2ray-geodata
 
 # ==================== 防爆内存与网络提速补丁 ====================
 echo "🛡️ 注入防爆内存与网络提速补丁..."
-echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config 
-echo "CONFIG_CCACHE=y" >> .config 
+# 注意：此处的 .config 必须紧贴行尾，绝不能有空格！
+echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
+echo "CONFIG_CCACHE=y" >> .config
+
+# 强制 Go 语言换源（防止拉取依赖超时）
 sed -i 's/https:\/\/proxy.golang.org/https:\/\/goproxy.cn,direct/g' feeds/packages/lang/golang/golang-package.mk || true
 
 # ==================== 自动化量产注入 ====================
