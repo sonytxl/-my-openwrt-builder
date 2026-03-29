@@ -142,3 +142,4 @@ jobs:
             - 默认 IP: `192.168.51.1`
             - 密码: `password`
             - WiFi: `Ecom-WiFi`
+            - 编译时间: ${{ env.release_date }}
