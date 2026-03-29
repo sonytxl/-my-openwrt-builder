@@ -136,7 +136,7 @@ jobs:
             - 🚀 **核心优势**: 内核 5.15极简对运存友好 + 联发科官方闭源 Wi-Fi 加速+MediaTek HNAT
             - 🚀 **源码分支**: `openwrt-23.05` (内核 5.15)
             - 🚀 **目标设备**: TP-Link TL-XDR6088 (双 2.5G 网口旗舰)
-            - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
+            - ✈️ **科学双擎**: HomeProxy (sing-box 内核)
             - 🛡️ **内网穿透**: Cloudflare Zero Trust (原生图形化面板)
             - 🌍 **异地组网**: WireGuard, ZeroTier
             
