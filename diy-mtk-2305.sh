@@ -1,36 +1,30 @@
 #!/bin/bash
 BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
-echo "🚀 开始执行 MTK 7981 终极量产白金版 (sbwml 稳定版) - 当前北京时间: $BJ_TIME"
+echo "🚀 开始执行 MTK 7981 终极量产版 (原生纯血引擎 + SSR-Plus 外科手术移植) - $BJ_TIME"
 
 # 1. 修改默认 IP 与主机名
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
 
-# ==================== ☢️ 核心换源破局 (终极核打击) ☢️ ====================
-echo "🧹 执行 sbwml 官方推荐的终极清理大法：全盘搜索并彻底摧毁冲突的 Makefile！"
-# 只有这样才能彻底斩断官方 feeds 里错综复杂的旧依赖连结，防止“走错门一秒暴毙”
-find ./ | grep Makefile | grep v2ray-geodata | xargs rm -f
-find ./ | grep Makefile | grep mosdns | xargs rm -f
-find ./ | grep Makefile | grep v2dat | xargs rm -f
-find ./ | grep Makefile | grep sing-box | xargs rm -f
-find ./ | grep Makefile | grep xray-core | xargs rm -f
+# ==================== ☢️ 放弃破坏性换源，采用“外科手术移植” ☢️ ====================
+# 既然 padavanonly 的原生引擎最完美兼容，我们绝不去破坏它们！我们只借用 SSR-Plus 的 UI 壳子。
 
-echo "📦 正在拉取 sbwml 极稳版全家桶..."
-# (1) 核心代理组件
+echo "📦 正在拉取 fw876 helloworld 源码..."
 rm -rf package/helloworld
-git clone --depth=1 -b v5 https://github.com/sbwml/openwrt_helloworld package/helloworld
+git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 
-# (2) MosDNS 和 v2dat
-git clone --depth=1 -b v5 https://github.com/sbwml/luci-app-mosdns package/mosdns
-
-# (3) v2ray-geodata
-git clone --depth=1 https://github.com/sbwml/v2ray-geodata package/v2ray-geodata
-
-# ==================== ⚙️ 核心编译器升级 ⚙️ ====================
-echo "🔄 正在替换底层 Go 编译器版本为 1.23 (sbwml 强制要求)..."
-rm -rf feeds/packages/lang/golang
-git clone https://github.com/sbwml/packages_lang_golang -b 23.x feeds/packages/lang/golang
+echo "🧹 正在剔除 helloworld 中与原生系统冲突的底层引擎..."
+# 核心大招：删掉这堆自带的引擎，强迫 SSR-Plus 去使用 padavanonly 原生自带的 xray 和 mosdns！
+# 彻底解决 1 秒报错、跨国断流、和架构污染！
+rm -rf package/helloworld/mosdns
+rm -rf package/helloworld/xray-core
+rm -rf package/helloworld/xray-plugin
+rm -rf package/helloworld/sing-box
+rm -rf package/helloworld/shadowsocks-rust
+rm -rf package/helloworld/v2ray-core
+rm -rf package/helloworld/v2ray-geodata
+rm -rf package/helloworld/v2ray-plugin
 
 # ==================== 防爆内存补丁 ====================
 echo "🛡️ 注入防爆内存与全局缓存..."
