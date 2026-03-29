@@ -2,39 +2,68 @@
 BJ_TIME=$(TZ='Asia/Shanghai' date +'%Y-%m-%d %H:%M:%S')
 echo "🚀 开始执行 MTK 7981 终极量产版 - $BJ_TIME"
 
+# 1. 修改默认 IP 与主机名
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
 
+# 2. 拉取 SSR-Plus 外壳并外科手术剥离冲突引擎
 echo "📦 拉取并清理外壳..."
 rm -rf package/helloworld
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
 rm -rf package/helloworld/mosdns package/helloworld/xray-core package/helloworld/xray-plugin package/helloworld/sing-box package/helloworld/shadowsocks-rust package/helloworld/v2ray-core package/helloworld/v2ray-geodata package/helloworld/v2ray-plugin
 
+# 3. 注入防爆内存编译参数
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-echo "📜 注入开机脚本..."
+# ==================== 自动化量产物理烙印 ====================
+echo "📜 正在进行 ROM 级物理烙印..."
+
+# 4. 🚀 物理烙印：密码强行定死为 password
+mkdir -p package/base-files/files/etc
+cat << "EOF" > package/base-files/files/etc/shadow
+root:$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:19436:0:99999:7:::
+daemon:*:0:0:99999:7:::
+ftp:*:0:0:99999:7:::
+network:*:0:0:99999:7:::
+nobody:*:0:0:99999:7:::
+EOF
+
+# 5. 🚀 物理烙印：直接写入 ZeroTier 账号配置
+mkdir -p package/base-files/files/etc/config
+cat << "EOF" > package/base-files/files/etc/config/zerotier
+config zerotier 'ecom_network'
+	option enabled '1'
+	list join '41207907b477904b'
+	option secret 'generate'
+	option nat '1'
+EOF
+
+# 6. 🚀 修复时序黑洞：将带“智能等待”的寻星指令写入开机启动项
+mkdir -p package/base-files/files/etc
+cat << "EOF" > package/base-files/files/etc/rc.local
+# Put your custom commands here that should be executed once
+# the system init finished. By default this file does nothing.
+
+(
+    # 智能等待：每5秒 ping 一次公网，死等网络通畅
+    while ! ping -c 1 -W 1 223.5.5.5 >/dev/null 2>&1; do
+        sleep 5
+    done
+    # 网络通畅后，额外等待20秒，确保系统时间完成 NTP 同步
+    sleep 20
+    # 最终执行寻星指令
+    zerotier-cli orbit 41207907b4 41207907b4
+) &
+
+exit 0
+EOF
+
+# 7. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
 mkdir -p package/base-files/files/etc/uci-defaults
-cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
+cat << "EOF" > package/base-files/files/etc/uci-defaults/99-custom-wifi
 #!/bin/sh
-
-# (1) 🚀 正宗 OpenWrt 改密法：使用 chpasswd 绝对生效！
-echo "root:password" | chpasswd
-
-# (2) ZeroTier 基础配置注入
-ZT_NET_ID="41207907b477904b"
-while uci -q delete zerotier.@zerotier[0]; do :; done
-uci set zerotier.default_setup=zerotier
-uci set zerotier.default_setup.enabled='1'
-uci add_list zerotier.default_setup.join="$ZT_NET_ID"
-uci set zerotier.default_setup.secret='generate'
-uci commit zerotier
-
-# (3) 🚀 修复时序黑洞：把 Orbit 寻星指令写入开机启动项 (rc.local)，开机 30 秒后网络通畅时再执行！
-sed -i '/exit 0/i \sleep 30 && zerotier-cli orbit 41207907b4 41207907b4 &' /etc/rc.local
-
-# (4) 统一 WiFi 命名
 if [ -f /etc/config/wireless ]; then
     for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
         uci set wireless.${iface}.ssid='Ecom-WiFi'
@@ -47,8 +76,7 @@ if [ -f /etc/config/wireless ]; then
     uci commit wireless
     wifi reload
 fi
-
-rm -f /etc/uci-defaults/999-custom-settings
+rm -f /etc/uci-defaults/99-custom-wifi
 exit 0
 EOF
 
