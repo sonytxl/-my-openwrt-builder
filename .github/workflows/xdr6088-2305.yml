@@ -71,13 +71,13 @@ jobs:
           
       - name: 7. ✨ Generate the ULTIMATE .config file
         run: |
-          [ -f ./diy-mtk-2305.sh ] && chmod +x ./diy-mtk-2305.sh
+          [ -f ./diy-7986.sh ] && chmod +x ./diy-7986.sh
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
           
           # 执行自定义脚本
-          [ -f ../diy-mtk-2305.sh ] && ../diy-mtk-2305.sh
+          [ -f ../diy-7986.sh ] && ../diy-7986.sh
           
           # 清理旧缓存挂载，确保索引健康
           echo "🧹 清除系统旧缓存，强制系统重新挂载健康的原生索引..."
