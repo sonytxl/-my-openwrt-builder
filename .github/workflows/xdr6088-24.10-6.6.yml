@@ -68,11 +68,11 @@ jobs:
           
       - name: 7. ✨ Generate the .config file
         run: |
-          chmod +x ./diy-mtk.sh
+          chmod +x ./diy-mtk-7986-2305.sh
           cd immortalwrt
           
           cp ../$CONFIG_NAME .config
-          ../diy-mtk.sh
+          ../diy-mtk-7986-2305.sh
           
           make defconfig
           cp .config ../$CONFIG_NAME-build
