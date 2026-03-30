@@ -1,7 +1,7 @@
 #!/bin/bash
 echo "🚀 开始执行 MTK 7981 编译前置任务..."
 
-# 1. 修改默认 IP (终极防漏杀：同时通杀官方 1.1 和 Padavanonly 的 6.1，目标改为 51.1)
+# 1. 修改默认 IP和主机名 (终极防漏杀：同时通杀官方 1.1 和 Padavanonly 的 6.1，目标改为 51.1)
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
@@ -20,12 +20,11 @@ rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 rm -rf package/helloworld/v2ray-geodata
 
-
-# 3. 注入防爆内存编译参数
+# 4. 注入防爆内存编译参数
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-# 7. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
+# 5. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
 mkdir -p package/base-files/files/etc/uci-defaults
 cat << "EOF" > package/base-files/files/etc/uci-defaults/99-custom-wifi
 #!/bin/sh
