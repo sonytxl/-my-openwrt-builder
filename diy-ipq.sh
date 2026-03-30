@@ -27,35 +27,9 @@ echo "📦 正在开启高通全局 Ccache 编译缓存..."
 echo "CONFIG_DEVEL=y" >> .config
 echo "CONFIG_CCACHE=y" >> .config
 
-# 7. 注入开机自动配置脚本 (后台密码 + ZeroTier + WiFi 统一)
-echo "📜 正在注入开机自动配置脚本..."
-mkdir -p package/base-files/files/etc/uci-defaults
-cat << "EOF" > package/base-files/files/etc/uci-defaults/999-custom-settings
-#!/bin/sh
 
-# (1) 设置路由器默认登录密码为 password (写入加密后的 Hash 值)
-sed -i 's/^\(root:\)[^:]*:/\1$1$V4UetPzk$CYXluq41wU.F4HnvQ.6hX.:/' /etc/shadow
 
-# (2) ZeroTier 全自动静默加入与 Moon 挂载
-ZT_NET_ID="41207907b477904b"
-
-while uci -q delete zerotier.@zerotier[0]; do :; done
-uci set zerotier.default_setup=zerotier
-uci set zerotier.default_setup.enabled='1'
-uci add_list zerotier.default_setup.join="$ZT_NET_ID"
-uci set zerotier.default_setup.secret='generate'
-uci commit zerotier
-
-/etc/init.d/zerotier enable
-/etc/init.d/zerotier start
-
-# 延时 15 秒等待 ZT 生成虚拟网卡，然后挂载搬瓦工 Moon 卫星
-(
-    sleep 15
-    zerotier-cli orbit 41207907b4 41207907b4
-) &
-
-# (3) 设置所有 WiFi 频段名称为 mywifi，密码为 password
+#  设置所有 WiFi 频段名称为 mywifi，密码为 password
 # 等待系统自动生成默认 WiFi 配置文件后执行拦截修改
 sleep 3
 if [ -f /etc/config/wireless ]; then
