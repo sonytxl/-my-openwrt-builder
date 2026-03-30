@@ -9,7 +9,7 @@ permissions:
 env:
   OPENWRT_SOURCE: https://github.com/padavanonly/immortalwrt-mt798x-6.6
   OPENWRT_BRANCH: "openwrt-24.10-6.6" 
-  CONFIG_NAME: xdr6088.config
+  CONFIG_NAME: xdr6088-2410-6.6.config
   FIRMWARE_NAME: immortalwrt-xdr6088-6.6
 
 jobs:
