@@ -51,22 +51,31 @@ jobs:
         run: |
           git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
 
-      - name: 5. Setup ccache (保卫 500MB 缓存)
+      - name: 5. Cache Downloaded Packages (dl)
+        uses: actions/cache@v4
+        with:
+          path: immortalwrt/dl
+          key: ${{ runner.os }}-openwrt-dl-mt7986-6.6-${{ hashFiles('**/feeds.conf.default') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-dl-mt7986-6.6-
+            ${{ runner.os }}-openwrt-dl-mt7981-6.6-
+            ${{ runner.os }}-openwrt-dl-
+
+      - name: 6. Setup ccache (保卫独立编译碎片)
         uses: actions/cache@v4
         with:
           path: immortalwrt/.ccache
-          key: ${{ runner.os }}-openwrt-mt7986-ccache-${{ github.run_id }}
+          key: ${{ runner.os }}-openwrt-ccache-mt7986-6.6-${{ hashFiles('**/feeds.conf.default') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-mt7986-ccache-
-            ${{ runner.os }}-openwrt-mt7981-ccache-
+            ${{ runner.os }}-openwrt-ccache-mt7986-6.6-
 
-      - name: 6. Load Feeds
+      - name: 7. Load Feeds
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-      - name: 7. ✨ Generate the .config file
+      - name: 8. ✨ Generate the .config file
         run: |
           chmod +x ./diy-mtk-2410-6.6.sh
           cd immortalwrt
@@ -77,13 +86,12 @@ jobs:
           make defconfig
           cp .config ../$CONFIG_NAME-build
 
-      - name: 8. Download packages
+      - name: 9. Download packages
         run: |
           cd immortalwrt
           make download -j8
-          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
 
-      - name: 9. Compile the firmware
+      - name: 10. Compile the firmware
         id: compile
         run: |
           cd immortalwrt
@@ -94,14 +102,14 @@ jobs:
             exit 1
           }
 
-      - name: 10. Upload build logs on failure
+      - name: 11. Upload build logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: MTK_compile_error_log
           path: immortalwrt/compile_error.log
           
-      - name: 11. Package firmware
+      - name: 12. Package firmware
         if: success()
         run: |
           mkdir -p firmware_release
@@ -110,13 +118,13 @@ jobs:
           FIRMWARE_DATE=$(date +%Y-%m-%d)
           for f in *; do mv "$f" "XDR6088-${FIRMWARE_DATE}-${f}"; done
           
-      - name: 12. Generate release tag (注入北京时间)
+      - name: 13. Generate release tag (注入北京时间)
         if: success()
         run: |
           echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
           echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
           
-      - name: 13. Upload firmware to Release
+      - name: 14. Upload firmware to Release
         uses: softprops/action-gh-release@v2
         if: success()
         with:
@@ -128,7 +136,7 @@ jobs:
             - **源码仓库**: `padavanonly/immortalwrt-mt798x-6.6`
             - **分支版本**: `openwrt-24.10-6.6`
             - **核心优势**: Linux 6.6 现代内核 + 联发科官方闭源 Wi-Fi 加速，极致精简
-
+            
             🚀 **基础功能**:
             - 自动重启，终端，ddns，upnp
             
@@ -144,5 +152,5 @@ jobs:
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
-            - 默认密码: `无`
+            - 默认密码: `无` 
             - 编译时间: ${{ env.release_date }}
