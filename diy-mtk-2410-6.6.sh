@@ -20,12 +20,6 @@ rm -rf package/helloworld/trojan
 rm -rf package/helloworld/naiveproxy
 rm -rf package/helloworld/v2ray-geodata
 
-# 4. 拉取 Tailscale 图形界面源码 (破除原版无 UI 的限制)
-# echo "📦 正在注入 luci-app-tailscale 源码..."
-# git clone https://github.com/asvow/luci-app-tailscale.git package/luci-app-tailscale
-
-# 5. 加入预编译 Rust 保底防线
-echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 
 # 3. 注入防爆内存编译参数
 echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
