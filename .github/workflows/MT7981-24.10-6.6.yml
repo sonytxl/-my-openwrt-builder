@@ -141,9 +141,9 @@ jobs:
             
             📦 **核心功能与插件**:
             - ✈️ **科学双擎**: SSR-Plus (支持 UDP/MosDNS), HomeProxy (sing-box 内核)
-            - 🌍 **异地组网**: WireGuard, ZeroTier, **Tailscale (已集成原生 Web 界面)**
+            - 🌍 **异地组网**: WireGuard, ZeroTier
             
             ⚙️ **系统默认信息**:
             - 默认 IP: `192.168.51.1`
-            - 默认密码: `password` (本次已加入无敌注入脚本)
+            - 默认密码: `无`
             - 编译时间: ${{ env.release_date }}
