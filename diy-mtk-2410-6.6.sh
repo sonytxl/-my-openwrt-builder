@@ -31,4 +31,24 @@ echo "CONFIG_RUST_USE_PREBUILT_HOST=y" >> .config
 echo "📦 正在开启全局 Ccache 编译缓存..."
 echo "CONFIG_CCACHE=y" >> .config
 
+# 7. WiFi 配置使用 uci-defaults 动态注入 (因涉及硬件底层识别)
+mkdir -p package/base-files/files/etc/uci-defaults
+cat << "EOF" > package/base-files/files/etc/uci-defaults/99-custom-wifi
+#!/bin/sh
+if [ -f /etc/config/wireless ]; then
+    for iface in $(uci show wireless | grep "=wifi-iface" | cut -d'.' -f2 | cut -d'=' -f1); do
+        uci set wireless.${iface}.ssid='Ecom-WiFi'
+        uci set wireless.${iface}.encryption='psk2'
+        uci set wireless.${iface}.key='password'
+    done
+    for radio in $(uci show wireless | grep "=wifi-device" | cut -d'.' -f2 | cut -d'=' -f1); do
+        uci set wireless.${radio}.disabled='0'
+    done
+    uci commit wireless
+    wifi reload
+fi
+rm -f /etc/uci-defaults/99-custom-wifi
+exit 0
+EOF
+
 echo "✅ 前置环境准备完毕，完美底盘即将移交编译引擎！"
