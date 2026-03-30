@@ -4,7 +4,8 @@ echo "🚀 开始执行 MTK 7981 编译前置任务..."
 # 1. 修改默认 IP (终极防漏杀：同时通杀官方 1.1 和 Padavanonly 的 6.1，目标改为 51.1)
 sed -i 's/192.168.1.1/192.168.51.1/g' package/base-files/files/bin/config_generate
 sed -i 's/192.168.6.1/192.168.51.1/g' package/base-files/files/bin/config_generate
-
+sed -i 's/ImmortalWrt/Ecom-Gateway/g' package/base-files/files/bin/config_generate
+ 
 # 2. 拉取 SSR-Plus 源码
 echo "📦 正在拉取 luci-app-ssr-plus 源码..."
 git clone --depth=1 https://github.com/fw876/helloworld.git package/helloworld
