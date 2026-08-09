@@ -59,14 +59,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq807x-ccache-
 
-      - name: 5. Load Feeds & Clone Stable daed
+      - name: 5. Load Feeds & Clone Stable daed (morytyann 官方原生打包版)
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 换成 morytyann 社区最稳维护版（纯净无 Bug 官方原生 Dashboard）
-          rm -rf package/dae package/luci-app-daed
+          # 彻底清理旧的第三方适配包
+          rm -rf package/dae package/luci-app-daed package/daed
+          
+          # 拉取 morytyann 维护的官方原生 100% 对齐适配库
           git clone https://github.com/morytyann/openwrt-daed.git package/dae
           git clone https://github.com/morytyann/luci-app-daed.git package/luci-app-daed
 
