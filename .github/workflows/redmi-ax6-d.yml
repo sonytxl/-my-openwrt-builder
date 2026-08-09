@@ -59,18 +59,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-openwrt-ipq807x-ccache-
 
-      - name: 5. Load Feeds & Clone Stable daed (使用公开稳定源)
+      - name: 5. Load Feeds & Clone QiuSimons daed (kix活库分支)
         run: |
           cd immortalwrt
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # 彻底清理旧目录
-          rm -rf package/dae package/luci-app-daed package/daed
-          
-          # 拉取完全公开、带 Web UI 且带 LuCI 的稳定版集成源
-          git clone https://github.com/sbwml/openwrt-daed.git package/dae
-          git clone https://github.com/sbwml/luci-app-daed.git package/luci-app-daed
+          # 动态拉取 QiuSimons 大佬最新活库 kix 分支到 package/dae
+          rm -rf package/dae
+          git clone -b kix https://github.com/QiuSimons/luci-app-daed.git package/dae
 
       - name: 6. ✨ Generate .config & Inject BTF/eBPF Hard Requirements
         run: |
