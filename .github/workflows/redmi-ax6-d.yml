@@ -1,4 +1,4 @@
-name: Build OP for redmi-ax6
+name: Build OP for redmi-ax6-d
 
 on:
   workflow_dispatch:
