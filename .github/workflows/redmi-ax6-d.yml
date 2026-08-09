@@ -1,0 +1,183 @@
+name: Build OP for redmi-ax6
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 对应北京时间每月 2 号凌晨 00:00 (UTC 时间 1 号 16:00)
+    - cron: '0 16 1 * *'
+
+permissions:
+  contents: write
+
+env:
+  OPENWRT_SOURCE: https://github.com/VIKINGYFY/immortalwrt
+  OPENWRT_BRANCH: "main"
+  CONFIG_NAME: redmi-ax6-d.config
+  FIRMWARE_NAME: redmi-ax6
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: 1. Checkout
+        uses: actions/checkout@v4
+
+      - name: 2. Free Disk Space, Init Env & Pre-install eBPF/Rust Toolchain
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          sudo docker image prune --all --force
+          
+          sudo fallocate -l 10G /mnt/swapfile
+          sudo chmod 600 /mnt/swapfile
+          sudo mkswap /mnt/swapfile
+          sudo swapon /mnt/swapfile
+          
+          # 1. 安装 Rust 环境
+          curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
+          export PATH="$HOME/.cargo/bin:$PATH"
+          rustc --version
+          
+          # 2. 安装 pnpm 前端工具链 (daed UI 编译必备)
+          sudo npm install -g pnpm
+          
+          # 3. 补齐 OpenWrt 编译基础包 + eBPF/BTF 编译关键依赖 (clang, llvm, bpftool, zstd)
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install -y ccache ack antlr3 asciidoc autoconf automake autopoint binutils bison build-essential bzip2 clang cmake cpio curl device-tree-compiler fastjar flex gawk gettext gcc-multilib g++-multilib git gperf haveged help2man intltool libc6-dev-i386 libelf-dev libglib2.0-dev libgmp3-dev libltdl-dev libmpc-dev libmpfr-dev libncurses5-dev libncursesw5-dev libreadline-dev libssl-dev libtool llvm lrzsz mkisofs msmtp nano ninja-build p7zip p7zip-full patch pkgconf python2.7 python3 python3-pip python3-pyelftools python3-setuptools qemu-utils rsync scons squashfs-tools subversion swig texinfo uglifyjs upx-ucl unzip vim wget xmlto xxd zlib1g-dev libzstd-dev zstd bpftool
+
+      - name: 3. Clone Correct OpenWrt source code
+        run: |
+          git clone --depth 1 -b $OPENWRT_BRANCH $OPENWRT_SOURCE immortalwrt
+
+      - name: 4. ⚡ Setup OpenWrt Ccache (统一 IPQ807x 家族硬件加速缓存键)
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/immortalwrt/.ccache
+          key: ${{ runner.os }}-openwrt-ipq807x-ccache-${{ github.sha }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-ipq807x-ccache-
+
+      - name: 5. Load Feeds & Clone QiuSimons daed (kix活库分支)
+        run: |
+          cd immortalwrt
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+          
+          # 动态拉取 QiuSimons 大佬最新活库 kix 分支到 package/dae
+          rm -rf package/dae
+          git clone -b kix https://github.com/QiuSimons/luci-app-daed.git package/dae
+
+      - name: 6. ✨ Generate .config & Inject BTF/eBPF Hard Requirements
+        run: |
+          chmod +x ./diy-ipq.sh
+          cp .config ./immortalwrt/.config 2>/dev/null || true
+          
+          cd immortalwrt
+          cp ../$CONFIG_NAME .config
+          
+          # 1. 基础编译与 Ccache 逻辑
+          echo "CONFIG_CCACHE=y" >> .config
+          echo "CONFIG_DEVEL=y" >> .config
+          
+          # 2. ⚡ 物理注入 daed / eBPF / BTF 内核依赖硬要求 (防崩关键)
+          cat <<EOF >> .config
+          CONFIG_KERNEL_DEBUG_INFO=y
+          CONFIG_KERNEL_DEBUG_INFO_REDUCED=n
+          CONFIG_KERNEL_DEBUG_INFO_BTF=y
+          CONFIG_KERNEL_CGROUPS=y
+          CONFIG_KERNEL_CGROUP_BPF=y
+          CONFIG_KERNEL_BPF_EVENTS=y
+          CONFIG_BPF_TOOLCHAIN_HOST=y
+          CONFIG_KERNEL_XDP_SOCKETS=y
+          CONFIG_PACKAGE_kmod-xdp-sockets-diag=y
+          CONFIG_PACKAGE_luci-app-daed=y
+          CONFIG_PACKAGE_daed=y
+          EOF
+          
+          # 3. 执行外部预置 DIY 脚本
+          ../diy-ipq.sh
+          
+          # 4. 刷新并对齐配置
+          make defconfig
+          
+          # 5. 强行修正 ip-full 替换 mini 版，确保 eBPF 路由表挂载成功
+          sed -i 's/CONFIG_PACKAGE_ip-tiny=y/# CONFIG_PACKAGE_ip-tiny is not set/g' .config
+          sed -i 's/CONFIG_PACKAGE_ip-full=m/CONFIG_PACKAGE_ip-full=y/g' .config
+          echo "CONFIG_PACKAGE_ip-full=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-tun=y" >> .config
+          echo "CONFIG_PACKAGE_kmod-sched-core=y" >> .config
+          
+          make defconfig
+          cp .config ../$CONFIG_NAME-build
+
+      - name: 7. Download packages
+        run: |
+          cd immortalwrt
+          make download -j8
+          find dl -size -1024c -exec ls -l {} \; -exec rm -f {} \;
+
+      - name: 8. Compile the firmware (限流防爆，精准对齐全局缓存)
+        id: compile
+        run: |
+          cd immortalwrt
+          export CCACHE_DIR=${{ github.workspace }}/immortalwrt/.ccache
+          ccache -M 5G
+          
+          echo -e "$(nproc) thread compile"
+          make -j$(nproc) || {
+            echo "多线程编译失败，正在使用单线程生成详细日志..."
+            make -j1 V=s 2>&1 | tee compile_error.log
+            exit 1
+          }
+
+      - name: 9. Upload build logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenWrt_compile_error_log
+          path: immortalwrt/compile_error.log
+
+      - name: 10. Package firmware
+        if: success()
+        run: |
+          mkdir -p firmware_release
+          find immortalwrt/bin/targets/ -type f \( -name "*.bin" -o -name "*.img" -o -name "*.ubi" \) -exec cp {} ./firmware_release/ \;
+          cd firmware_release
+          FIRMWARE_DATE=$(date +%Y-%m-%d)
+          for f in *; do mv "$f" "Redmi-AX6-${FIRMWARE_DATE}-${f}"; done
+
+      - name: 11. Generate release tag
+        if: success()
+        run: |
+          echo "release_tag=$(TZ='Asia/Shanghai' date +"%Y.%m.%d-%H%M")" >> $GITHUB_ENV
+          echo "release_date=$(TZ='Asia/Shanghai' date +"%Y-%m-%d %H:%M")" >> $GITHUB_ENV
+
+      - name: 12. Upload firmware to Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: ${{ env.release_tag }}
+          name: "🚀 红米AX6 闭源满血双擎/eBPF极速版 (${{ env.release_date }})"
+          files: firmware_release/*
+          body: |
+            ## 🚀 红米AX6专属高能固件（每月2号自动云更新）
+            - **源码物料**: `VIKINGYFY/immortalwrt` (main 分支)
+            - **硬核底座**: Linux 6.18 内核 + 纯血高通原厂闭源 Wi-Fi 驱动 + NSS 12.5 纯硬件数据流卸载
+            
+            🚀 **开箱即用自动化**:
+            - 自动定时重启，TTYD网页终端，DDNS满血版 wget-ssl，UPnP高并发端口映射
+            
+            🧩 **内嵌核心军火库**:
+            - ⚡ **eBPF 狂暴引擎**: daed (QiuSimons kix活库分支 + 原生 BTF 内核集成)
+            - ✈️ **跨境双擎**: HomeProxy (纯血内置 Sing-box 核心) + PassWall (极简化定制 Xray 灾备内核)
+            - 🛡️ **内网守卫**: Cloudflare Zero Trust 隧道
+            - 🌍 **异地维护**: WireGuard 硬件加速管道 + ZeroTier 远程通道
+            - 🎨 **视觉交互**: 现代科技暗黑 Argon 主题 + 100% 汉化对齐
+            
+            ⚙️ **默认基建配线**:
+            - 默认管理 IP: `192.168.61.1`
+            - 默认登录密码: `无` (请登录后第一时间自行设定)
+            - 默认无缝 Wi-Fi: `Ecom-WiFi`  密码: `password`
+            - 交付打包时间: ${{ env.release_date }}
